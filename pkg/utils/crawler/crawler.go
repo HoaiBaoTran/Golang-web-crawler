@@ -25,6 +25,7 @@ func CreateCrawler() *MyCrawler {
 
 func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
 	extractedData := models.ExtractedData{}
+	extractedData.CrawledUrl = urlLink
 	myCrawler.crawler.OnHTML(".container > .sidebar-1", func(e *colly.HTMLElement) {
 
 		title := e.ChildText(".container > .sidebar-1 > .title-detail")
@@ -60,7 +61,7 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
 		regexPattern := `(https:\/\/\S+)`
 		re := regexp.MustCompile(regexPattern)
 		if re.MatchString(urlLink) {
-			extractedData.Url = append(extractedData.Url, urlLink)
+			extractedData.RelatedUrl = append(extractedData.RelatedUrl, urlLink)
 		}
 	})
 
