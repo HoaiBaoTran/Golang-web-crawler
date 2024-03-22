@@ -7,6 +7,7 @@ import (
 	"github.com/hoaibao/web-crawler/pkg/database"
 	"github.com/hoaibao/web-crawler/pkg/models"
 	"github.com/hoaibao/web-crawler/pkg/utils/logger"
+	goDotEnv "github.com/joho/godotenv"
 )
 
 var (
@@ -32,6 +33,10 @@ func LogMessage(args ...interface{}) {
 }
 
 func NewMemoryExtractedDataRepository() *MemoryExtractedDataRepository {
+
+	err := goDotEnv.Load(".env")
+	CheckError(err, "Can't load value from .env")
+
 	config := &database.Config{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     os.Getenv("DB_PORT"),
