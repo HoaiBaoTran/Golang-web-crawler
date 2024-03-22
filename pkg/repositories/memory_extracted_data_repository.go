@@ -2,11 +2,15 @@ package repositories
 
 import (
 	"database/sql"
-	"log"
 	"os"
 
 	"github.com/hoaibao/web-crawler/pkg/database"
 	"github.com/hoaibao/web-crawler/pkg/models"
+	"github.com/hoaibao/web-crawler/pkg/utils/logger"
+)
+
+var (
+	MyLogger = logger.InitLogger()
 )
 
 type MemoryExtractedDataRepository struct {
@@ -16,8 +20,15 @@ type MemoryExtractedDataRepository struct {
 
 func CheckError(err error, msg string) {
 	if err != nil {
-		log.Fatal(err, msg)
+		// log.Fatal(err, msg)
+		MyLogger.ConsoleLogger.Error(msg, err)
+		MyLogger.FileLogger.Error(msg, err)
 	}
+}
+
+func LogMessage(args ...interface{}) {
+	MyLogger.ConsoleLogger.Infoln(args)
+	MyLogger.FileLogger.Infoln(args)
 }
 
 func NewMemoryExtractedDataRepository() *MemoryExtractedDataRepository {
