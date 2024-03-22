@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/hoaibao/web-crawler/pkg/models"
@@ -10,10 +11,6 @@ import (
 type MyCrawler struct {
 	crawler *colly.Collector
 }
-
-var (
-	extractedData = models.ExtractedData{}
-)
 
 func CreateCrawler() *MyCrawler {
 	crawler := colly.NewCollector(
@@ -26,8 +23,10 @@ func CreateCrawler() *MyCrawler {
 	}
 }
 
-func (myCrawler *MyCrawler) CrawlData(urlLink string) {
+func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
+	extractedData := models.ExtractedData{}
 	myCrawler.crawler.OnHTML(".container > .sidebar-1", func(e *colly.HTMLElement) {
+
 		title := e.ChildText(".container > .sidebar-1 > .title-detail")
 		if title != "" {
 			extractedData.Title = title
@@ -37,6 +36,31 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) {
 		lines := e.ChildTexts(".container > .sidebar-1 > p, .container > .sidebar-1 > article > p")
 		if len(lines) > 0 {
 			extractedData.Paragraph = append(extractedData.Paragraph, lines...)
+		}
+
+		imgUrls := e.ChildAttrs(".container > .sidebar-1 > article > figure > .fig-picture > picture > img", "src")
+		if len(imgUrls) > 0 {
+			for _, value := range imgUrls {
+				extractedData.Img = append(extractedData.Img, models.ImgStruct{
+					Src: value,
+				})
+			}
+		}
+
+		imgDescriptions := e.ChildTexts(".container > .sidebar-1 > article > figure > figcaption > p")
+		if len(imgDescriptions) > 0 {
+			for index, value := range imgDescriptions {
+				extractedData.Img[index].Description = value
+			}
+		}
+	})
+
+	myCrawler.crawler.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		urlLink := e.Attr("href")
+		regexPattern := `(https:\/\/\S+)`
+		re := regexp.MustCompile(regexPattern)
+		if re.MatchString(urlLink) {
+			extractedData.Url = append(extractedData.Url, urlLink)
 		}
 	})
 
@@ -50,5 +74,5 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) {
 
 	myCrawler.crawler.Visit(urlLink)
 
-	fmt.Println("result: ", extractedData)
+	return extractedData
 }
