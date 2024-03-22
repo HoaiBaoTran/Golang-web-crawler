@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/hoaibao/web-crawler/pkg/handlers"
+	"github.com/hoaibao/web-crawler/pkg/repositories"
+	"github.com/hoaibao/web-crawler/pkg/services"
 	"github.com/hoaibao/web-crawler/pkg/utils/crawler"
 )
 
@@ -12,4 +15,9 @@ func main() {
 	urlLink := "http://localhost:8080/nong-dan"
 	extractedData := myCrawler.CrawlData(urlLink)
 	fmt.Println("data: ", extractedData)
+
+	extractedDataRepository := repositories.NewMemoryExtractedDataRepository()
+	extractedDataService := services.NewExtractedDataService(extractedDataRepository)
+	extractedDataHandler := handlers.NewExtractedDataHandler(extractedDataService)
+	fmt.Println("Test ", extractedDataHandler)
 }

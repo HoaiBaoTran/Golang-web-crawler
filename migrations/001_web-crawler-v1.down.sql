@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS img;
+
+DROP TABLE IF EXISTS extracted_data;
