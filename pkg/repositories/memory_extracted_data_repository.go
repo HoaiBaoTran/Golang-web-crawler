@@ -64,5 +64,6 @@ func (r *MemoryExtractedDataRepository) GetExtractedDataById(id int) (models.Ext
 }
 
 func (r *MemoryExtractedDataRepository) CreateExtractedData(data models.ExtractedData) (models.ExtractedData, error) {
-	return models.ExtractedData{}, nil
+
+	return data, nil
 }

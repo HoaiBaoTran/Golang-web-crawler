@@ -14,5 +14,5 @@ func SetExtractedDataRouter(extractedDataHandler *handlers.ExtractedDataHandler,
 
 	extractedDataRouter.HandleFunc("", extractedDataHandler.GetAllExtractedData).Methods("GET")
 	extractedDataRouter.HandleFunc("/{id}", extractedDataHandler.GetExtractedDataById).Methods("GET")
-	extractedDataRouter.HandleFunc("", extractedDataHandler.GetAllExtractedData).Methods("POST")
+	extractedDataRouter.HandleFunc("", extractedDataHandler.CreateExtractedData).Methods("POST")
 }

@@ -24,14 +24,15 @@ func CreateCrawler() *MyCrawler {
 }
 
 func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
-	extractedData := models.ExtractedData{}
+	extractedData := models.ExtractedData{
+		RelatedUrl: make([]string, 0),
+	}
 	extractedData.CrawledUrl = urlLink
 	myCrawler.crawler.OnHTML(".container > .sidebar-1", func(e *colly.HTMLElement) {
 
 		title := e.ChildText(".container > .sidebar-1 > .title-detail")
 		if title != "" {
 			extractedData.Title = title
-			fmt.Println("title", title)
 		}
 
 		lines := e.ChildTexts(".container > .sidebar-1 > p, .container > .sidebar-1 > article > p")
@@ -56,7 +57,7 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
 		}
 	})
 
-	myCrawler.crawler.OnHTML("a[href]", func(e *colly.HTMLElement) {
+	myCrawler.crawler.OnHTML(".container > .sidebar-1 > a[href]", func(e *colly.HTMLElement) {
 		urlLink := e.Attr("href")
 		regexPattern := `(https:\/\/\S+)`
 		re := regexp.MustCompile(regexPattern)

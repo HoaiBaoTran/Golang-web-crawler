@@ -1,7 +1,6 @@
 package statistics_test
 
 import (
-	"math"
 	"reflect"
 	"sync"
 	"testing"
@@ -24,11 +23,6 @@ func BenchmarkCountWordAndChar(b *testing.B) {
 	}
 }
 
-func isAlmostEqual(a, b float64) bool {
-	const float64EqualityThreshold = 0.00001
-	return math.Abs(a-b) <= float64EqualityThreshold
-}
-
 func BenchmarkFrequency(b *testing.B) {
 	var wg sync.WaitGroup
 	content := []string{
@@ -36,7 +30,7 @@ func BenchmarkFrequency(b *testing.B) {
 		"This is sample line 2.",
 	}
 	wg.Add(1)
-	frequency, averageWordLength := statistics.CountFrequencyAndCalcAverage(content, &wg)
+	frequency, totalUniqueWordLength := statistics.CountFrequencyAndCalcAverage(content, &wg)
 	wg.Wait()
 
 	expectedFrequency := map[string]int{
@@ -47,10 +41,10 @@ func BenchmarkFrequency(b *testing.B) {
 		"1":      1,
 		"2":      1,
 	}
-	expectedAverageWordLength := 0.333333
+	expectedTotalUniqueWordLength := 18
 
-	if !isAlmostEqual(expectedAverageWordLength, averageWordLength) {
-		b.Errorf("unexpected total word length: got %f, want %f", averageWordLength, expectedAverageWordLength)
+	if totalUniqueWordLength != int64(expectedTotalUniqueWordLength) {
+		b.Errorf("unexpected total word length: got %d, want %d", totalUniqueWordLength, expectedTotalUniqueWordLength)
 	}
 	if !reflect.DeepEqual(frequency, expectedFrequency) {
 		b.Errorf("Result %v does not match expected %v", frequency, expectedFrequency)
