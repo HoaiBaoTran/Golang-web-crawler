@@ -6,9 +6,9 @@ type ExtractedData struct {
 	CrawledUrl        string         `json:"crawled-url"`
 	RelatedUrl        []string       `json:"related-url"`
 	Img               []ImgStruct    `json:"image"`
-	LineCount         int32          `json:"line-count"`
-	WordCount         int32          `json:"word-count"`
-	CharCount         int64          `json:"character-count"`
+	LineCount         int            `json:"line-count"`
+	WordCount         int            `json:"word-count"`
+	CharCount         int            `json:"character-count"`
 	AverageWordLength float64        `json:"average-word-length"`
 	Frequency         map[string]int `json:"frequency"`
 }

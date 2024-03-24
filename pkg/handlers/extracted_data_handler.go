@@ -39,12 +39,14 @@ func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *htt
 		return
 	}
 
+	fmt.Println("Crawling data ....")
 	response, err := h.ExtractedDataService.CreateExtractedData(urlPath)
 	if err != nil {
 		http.Error(w, "Server", http.StatusBadRequest)
 		return
 	}
 
+	fmt.Println("Crawling data successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)

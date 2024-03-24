@@ -1,9 +1,13 @@
 package crawler
 
 import (
+	"context"
 	"fmt"
-	"regexp"
+	"log"
+	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	chromeDp "github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
 	"github.com/hoaibao/web-crawler/pkg/models"
 )
@@ -55,14 +59,10 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
 				extractedData.Img[index].Description = value
 			}
 		}
-	})
 
-	myCrawler.crawler.OnHTML(".container > .sidebar-1 > a[href]", func(e *colly.HTMLElement) {
-		urlLink := e.Attr("href")
-		regexPattern := `(https:\/\/\S+)`
-		re := regexp.MustCompile(regexPattern)
-		if re.MatchString(urlLink) {
-			extractedData.RelatedUrl = append(extractedData.RelatedUrl, urlLink)
+		relatedUrls := e.ChildAttrs(".container > .sidebar-1 > article > div.box-tinlienquanv2 > article > h4 > a", "href")
+		if len(relatedUrls) > 0 {
+			extractedData.RelatedUrl = relatedUrls
 		}
 	})
 
@@ -77,4 +77,54 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string) models.ExtractedData {
 	myCrawler.crawler.Visit(urlLink)
 
 	return extractedData
+}
+
+func (myCrawler *MyCrawler) CrawlRelatedUrl(urlLink string) <-chan []string {
+	relatedUrlChan := make(chan []string)
+	go func(urlLink string) {
+		opts := append(chromeDp.DefaultExecAllocatorOptions[:],
+			chromeDp.Flag("headless", false),
+			chromeDp.Flag("start-fullscreen", true),
+			// chromeDp.Flag("enable-automation", false),
+			// chromeDp.Flag("disable-extensions", false),
+			// chromeDp.Flag("remote-debugging-port", "9222"),
+		)
+
+		ctxTimeOut, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		allocatorCtx, cancel := chromeDp.NewExecAllocator(ctxTimeOut, opts...)
+		defer cancel()
+		ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
+		defer cancel()
+
+		var elements []*cdp.Node
+		var relatedUrls []string
+		tasks := chromeDp.Tasks{
+			chromeDp.Navigate(urlLink),
+			chromeDp.WaitVisible(".container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2", chromeDp.ByQuery),
+			chromeDp.Nodes(".container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2 > article > h4 > a", &elements),
+		}
+
+		err := chromeDp.Run(ctx, tasks)
+		if err != nil {
+			log.Fatal("err: ", err)
+		}
+
+		for _, element := range elements {
+			var attributes map[string]string
+			err = chromeDp.Run(ctx, chromeDp.Attributes(element.FullXPath(), &attributes))
+			if err != nil {
+				fmt.Println("Failed to get attributes:", err)
+				return
+			}
+
+			for key, value := range attributes {
+				if key == "href" {
+					relatedUrls = append(relatedUrls, value)
+				}
+			}
+		}
+		relatedUrlChan <- relatedUrls
+	}(urlLink)
+	return relatedUrlChan
 }

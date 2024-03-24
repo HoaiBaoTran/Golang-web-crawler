@@ -28,9 +28,12 @@ func (s *ExtractedDataService) GetExtractedDataById(id int) (models.ExtractedDat
 func (s *ExtractedDataService) CreateExtractedData(urlPath string) (models.ExtractedData, error) {
 
 	myCrawler := crawler.CreateCrawler()
+
+	relatedUrlChan := myCrawler.CrawlRelatedUrl(urlPath)
+
 	// urlLink := "https://vnexpress.net/nong-dan-thu-nhap-gap-10-lan-neu-san-xuat-tom-lua-quy-mo-lon-4725097.html"
-	urlLink := "http://localhost:8081/nong-dan"
-	extractedData := myCrawler.CrawlData(urlLink)
+	// urlLink := "http://localhost:8081/nong-dan"
+	extractedData := myCrawler.CrawlData(urlPath)
 
 	lineCount, wordCount, charCount, averageWordLength, frequency := statistics.Statistics(extractedData.Paragraph)
 	extractedData.LineCount = lineCount
@@ -38,6 +41,9 @@ func (s *ExtractedDataService) CreateExtractedData(urlPath string) (models.Extra
 	extractedData.CharCount = charCount
 	extractedData.AverageWordLength = averageWordLength
 	extractedData.Frequency = frequency
+
+	relatedUrl := <-relatedUrlChan
+	extractedData.RelatedUrl = relatedUrl
 
 	return s.ExtractedDataRepository.CreateExtractedData(extractedData)
 }
