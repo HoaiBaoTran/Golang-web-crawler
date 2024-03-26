@@ -66,44 +66,32 @@ func (r *MemoryExtractedDataRepository) GetExtractedDataById(id int) (models.Ext
 
 func (r *MemoryExtractedDataRepository) CreateExtractedData(data []models.ExtractedData) ([]models.ExtractedData, error) {
 	for _, extractedData := range data {
-		insertImgStatement := `INSERT INTO img(img_urls, img_descriptions, extracted_data_id) VALUES `
-		for index, img := range extractedData.Img {
-			insertImgStatement += fmt.Sprintf("('%s', '%s', (SELECT id FROM new_extracted_data))", img.Src, img.Description)
-			if index < len(extractedData.Img)-1 {
-				insertImgStatement += ", "
-			}
-		}
+
 		insertFrequencyStatement := `INSERT INTO word_frequency(word, frequency, extracted_data_id) VALUES `
 		for key, frequency := range extractedData.Frequency {
 			insertFrequencyStatement += fmt.Sprintf("('%s', %d, (SELECT id FROM new_extracted_data)), ", key, frequency)
 		}
-		// insertFrequencyStatement = insertFrequencyStatement[:len(insertFrequencyStatement)-2]
-		// sqlStatement := fmt.Sprintf(`
-		// WITH new_extracted_data AS (
-		// 	INSERT INTO extracted_data(id, crawled_url, title, content, related_urls, line_count, word_count, char_count, average_word_length)
-		// 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		// 	RETURNING id
-		// ), new_img AS(
-		// 	%s
-		// ) %s`, insertImgStatement, insertFrequencyStatement)
+		insertFrequencyStatement = insertFrequencyStatement[:len(insertFrequencyStatement)-2]
+		sqlStatement := fmt.Sprintf(`
+		WITH new_extracted_data AS (
+			INSERT INTO extracted_data(data_id, line_count, word_count, char_count, average_word_length)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		) %s`, insertFrequencyStatement)
 
-		// LogMessage(sqlStatement)
-		// result, err := r.DB.Exec(
-		// 	sqlStatement,
-		// 	extractedData.Id,
-		// 	extractedData.CrawledUrl,
-		// 	extractedData.Title,
-		// 	strings.Join(extractedData.Paragraph, " "),
-		// 	strings.Join(extractedData.RelatedUrl, " "),
-		// 	extractedData.LineCount,
-		// 	extractedData.WordCount,
-		// 	extractedData.CharCount,
-		// 	extractedData.AverageWordLength,
-		// )
-		// CheckError(err, "Can't insert into database ")
-		// rowsAffected, err := result.RowsAffected()
-		// CheckError(err, "Can't get rows affected")
-		// LogMessage("Number of rows affected:", rowsAffected)
+		LogMessage(sqlStatement)
+		result, err := r.DB.Exec(
+			sqlStatement,
+			extractedData.Id,
+			extractedData.LineCount,
+			extractedData.WordCount,
+			extractedData.CharCount,
+			extractedData.AverageWordLength,
+		)
+		CheckError(err, "Can't insert into database ")
+		rowsAffected, err := result.RowsAffected()
+		CheckError(err, "Can't get rows affected")
+		LogMessage("Number of rows affected:", rowsAffected)
 
 	}
 	return data, nil
