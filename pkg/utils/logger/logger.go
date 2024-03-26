@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -22,6 +21,11 @@ func InitLogger() Logger {
 		ConsoleLogger: consoleLogger,
 		FileLogger:    fileLogger,
 	}
+}
+
+func (logger *Logger) LogMessage(args ...interface{}) {
+	logger.ConsoleLogger.Infoln(args)
+	logger.FileLogger.Infoln(args)
 }
 
 func InitFileLogger() *zap.SugaredLogger {
@@ -60,11 +64,11 @@ func getEncoder() zapcore.Encoder {
 func getLogWriter() zapcore.WriteSyncer {
 	current_date := time.Now().Format("02-01-2006")
 	current_time := time.Now().Format("15-04-05")
-	outputFileName := fmt.Sprintf("pkg/utils/logger/logger-files/log_%s_%s.txt", current_date, current_time)
+	outputFileName := fmt.Sprintf("/Users/hoaibao/Desktop/Workspace/Go/FPT_Assignments/web-crawler/pkg/utils/logger/logger-files/log_%s_%s.txt", current_date, current_time)
 	file, err := os.Create(outputFileName)
 	if err != nil {
-		// fmt.Println("Can't open log file", err)
-		log.Fatal("Can't open log file", err)
+		fmt.Println("Can't open log file", err)
+		// log.Fatal("Can't open log file", err)
 	}
 	return zapcore.AddSync(file)
 }
@@ -85,8 +89,8 @@ func InitConsoleLogger() *zap.SugaredLogger {
 	}
 	consoleLogger, err := cfg.Build()
 	if err != nil {
-		// fmt.Println("Can't not create logger", err)
-		log.Fatal("Can't not create logger", err)
+		fmt.Println("Can't not create logger", err)
+		// log.Fatal("Can't not create logger", err)
 	}
 	return consoleLogger.Sugar()
 }

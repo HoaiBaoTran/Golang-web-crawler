@@ -1,6 +1,7 @@
 package models
 
 type ExtractedData struct {
+	Id                string         `json:"id"`
 	Title             string         `json:"title"`
 	Paragraph         []string       `json:"paragraph"`
 	CrawledUrl        string         `json:"crawled-url"`

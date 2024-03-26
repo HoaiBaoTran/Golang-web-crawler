@@ -25,25 +25,31 @@ func (s *ExtractedDataService) GetExtractedDataById(id int) (models.ExtractedDat
 	return s.ExtractedDataRepository.GetExtractedDataById(id)
 }
 
-func (s *ExtractedDataService) CreateExtractedData(urlPath string) (models.ExtractedData, error) {
+func (s *ExtractedDataService) CreateExtractedData(urlPath string, maxDepth, editDistance int, tag []string) ([]models.ExtractedData, error) {
+	exit := make(chan bool)
+	dataChan := make(chan models.ExtractedData)
+	var data []models.ExtractedData
 
-	myCrawler := crawler.CreateCrawler()
+	myCrawler := crawler.CreateCrawler(maxDepth)
+	go myCrawler.CrawlWeb(urlPath, maxDepth, editDistance, tag, exit, dataChan)
 
-	relatedUrlChan := myCrawler.CrawlRelatedUrl(urlPath)
+	for {
+		select {
+		case extractedData := <-dataChan:
+			lineCount, wordCount, charCount, averageWordLength, frequency := statistics.Statistics(extractedData.Paragraph)
+			extractedData.LineCount = lineCount
+			extractedData.WordCount = wordCount
+			extractedData.CharCount = charCount
+			extractedData.AverageWordLength = averageWordLength
+			extractedData.Frequency = frequency
+			data = append(data, extractedData)
+		case <-exit:
+			// close(dataChan)
+			// time.Sleep(10 * time.Second)
+			// fmt.Println("finish crawling")
 
-	// urlLink := "https://vnexpress.net/nong-dan-thu-nhap-gap-10-lan-neu-san-xuat-tom-lua-quy-mo-lon-4725097.html"
-	// urlLink := "http://localhost:8081/nong-dan"
-	extractedData := myCrawler.CrawlData(urlPath)
+			return s.ExtractedDataRepository.CreateExtractedData(data)
+		}
+	}
 
-	lineCount, wordCount, charCount, averageWordLength, frequency := statistics.Statistics(extractedData.Paragraph)
-	extractedData.LineCount = lineCount
-	extractedData.WordCount = wordCount
-	extractedData.CharCount = charCount
-	extractedData.AverageWordLength = averageWordLength
-	extractedData.Frequency = frequency
-
-	relatedUrl := <-relatedUrlChan
-	extractedData.RelatedUrl = relatedUrl
-
-	return s.ExtractedDataRepository.CreateExtractedData(extractedData)
 }
