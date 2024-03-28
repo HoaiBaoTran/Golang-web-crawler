@@ -39,7 +39,7 @@ func CreateCrawler(maxDepth int) *MyCrawler {
 	}
 }
 
-func (myCrawler *MyCrawler) CrawlWeb(urlLink string, depth, editDistance int, tag []string, exit chan bool, dataChan chan models.ExtractedData) {
+func (myCrawler *MyCrawler) CrawlWeb(urlLink string, depth int, tag []string, exit chan bool, dataChan chan models.ExtractedData) {
 	defer func() {
 		exit <- true
 	}()
@@ -62,17 +62,12 @@ func (myCrawler *MyCrawler) CrawlWeb(urlLink string, depth, editDistance int, ta
 
 	extractedData := myCrawler.CrawlData(urlLink, tag)
 	dataChan <- extractedData
-	// Test data
-	// sampleUrls := []string{
-	// 	"http://localhost:8081/dong-vat",
-	// 	"http://localhost:8081/nong-dan",
-	// 	"http://localhost:8081/bong-da",
-	// }
-	//
 	e := make(chan bool)
 	for _, u := range extractedData.RelatedUrl {
 		time.Sleep(minPerLinkTest)
-		go myCrawler.CrawlWeb(u, depth-1, editDistance, tag, e, dataChan)
+		go func(u string) {
+			myCrawler.CrawlWeb(u, depth-1, tag, e, dataChan)
+		}(u)
 	}
 
 	for i := 0; i < len(extractedData.RelatedUrl); i++ {
@@ -142,8 +137,10 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 	})
 
 	myCrawler.crawler.Visit(urlLink)
-
+	fmt.Println("Craw data: ", urlLink)
+	fmt.Println("Start craw related urls: ", urlLink)
 	extractedData.RelatedUrl = <-relatedUrlChan
+	fmt.Println("Finish craw related urls: ", urlLink)
 	return extractedData
 }
 
@@ -179,7 +176,7 @@ func (myCrawler *MyCrawler) CrawlRelatedUrl(urlLink string) <-chan []string {
 		}
 		err := chromeDp.Run(ctx, beforeTasks)
 		if !found {
-			fmt.Println("Not found element ", err)
+			fmt.Println("Not found element ", err, urlLink)
 			relatedUrlChan <- []string{}
 			return
 		} else {

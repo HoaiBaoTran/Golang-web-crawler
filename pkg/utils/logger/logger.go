@@ -64,7 +64,7 @@ func getEncoder() zapcore.Encoder {
 func getLogWriter() zapcore.WriteSyncer {
 	current_date := time.Now().Format("02-01-2006")
 	current_time := time.Now().Format("15-04-05")
-	outputFileName := fmt.Sprintf("/Users/hoaibao/Desktop/Workspace/Go/FPT_Assignments/web-crawler/pkg/utils/logger/logger-files/log_%s_%s.txt", current_date, current_time)
+	outputFileName := fmt.Sprintf("pkg/utils/logger/logger-files/log_%s_%s.txt", current_date, current_time)
 	file, err := os.Create(outputFileName)
 	if err != nil {
 		fmt.Println("Can't open log file", err)

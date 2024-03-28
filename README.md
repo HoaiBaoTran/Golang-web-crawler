@@ -4,7 +4,6 @@ User gửi 1 hoặc NHIỀU link VN express lên server, server sẽ đi tới t
  
 Yêu cầu chi tiết:
  
-
 ------- DONE ---------
 - Khi crawl data sẽ lấy các thông tin sau về title, heading, paragraph
 - Data crawl về phải lưu lại vào 1 thư mục dưới dạng csv hoặc json
@@ -17,12 +16,12 @@ Yêu cầu chi tiết:
 - Có limit về số lượt link có thể crawl trong khoảng thời gian nhất định để k bị trang chủ ban IP (thời gian giữa các link dc crawl)
 - Crawl nhiều tầng, nghĩa là nếu trong bài đó có các bài artical khác thì tiếp tục crawl các link đó, user có thể optional từ 1 đến 3 tầng link như vậy
 - Giữ các tag html nào
++ highlight các từ giống nhau bằng html tag hoặc in đậm từ đó lên (dùng Levenshtein Distance (Edit Distance_))
 ------- DONE ---------
 
 
 ------- DOING ---------
-- Cho các option khi crawl : 
-  + highlight các từ giống nhau bằng html tag hoặc in đậm từ đó lên (dùng Levenshtein Distance (Edit Distance_))
+
 ------- DOING ---------
 
 ------- NOT YET ---------

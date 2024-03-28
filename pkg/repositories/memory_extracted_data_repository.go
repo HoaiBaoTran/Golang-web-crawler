@@ -35,7 +35,7 @@ func LogMessage(args ...interface{}) {
 
 func NewMemoryExtractedDataRepository() *MemoryExtractedDataRepository {
 
-	err := goDotEnv.Load("/Users/hoaibao/Desktop/Workspace/Go/FPT_Assignments/web-crawler/.env")
+	err := goDotEnv.Load(".env")
 	CheckError(err, "Can't load value from .env")
 
 	config := &database.Config{
@@ -66,7 +66,7 @@ func (r *MemoryExtractedDataRepository) GetExtractedDataById(id int) (models.Ext
 
 func (r *MemoryExtractedDataRepository) CreateExtractedData(data []models.ExtractedData) ([]models.ExtractedData, error) {
 	for _, extractedData := range data {
-
+		LogMessage("data: ", extractedData.Title)
 		insertFrequencyStatement := `INSERT INTO word_frequency(word, frequency, extracted_data_id) VALUES `
 		for key, frequency := range extractedData.Frequency {
 			insertFrequencyStatement += fmt.Sprintf("('%s', %d, (SELECT id FROM new_extracted_data)), ", key, frequency)
@@ -79,7 +79,7 @@ func (r *MemoryExtractedDataRepository) CreateExtractedData(data []models.Extrac
 			RETURNING id
 		) %s`, insertFrequencyStatement)
 
-		LogMessage(sqlStatement)
+		// LogMessage(sqlStatement)
 		result, err := r.DB.Exec(
 			sqlStatement,
 			extractedData.Id,

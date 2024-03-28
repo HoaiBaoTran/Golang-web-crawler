@@ -11,17 +11,20 @@ import (
 	"github.com/hoaibao/web-crawler/pkg/models"
 	"github.com/hoaibao/web-crawler/pkg/services"
 	convertJSON "github.com/hoaibao/web-crawler/pkg/utils/convert-json"
+	handleTag "github.com/hoaibao/web-crawler/pkg/utils/handle-html-tag"
 )
 
 type Options struct {
-	MaxDepth     int      `json:"max-depth"`
-	Tag          []string `json:"tag"`
-	EditDistance int      `json:"edit-distance"`
+	MaxDepth            int      `json:"max-depth"`
+	Tag                 []string `json:"tag"`
+	LevenshteinDistance int      `json:"levenshtein-distance"`
+	Word                []string `json:"word"`
+	WrappedTag          string   `json:"wrapped-tag"`
 }
 
 type RequestBody struct {
-	Url     string  `json:"url"`
-	Options Options `json:"options"`
+	Url     []string `json:"url"`
+	Options Options  `json:"options"`
 }
 
 type Response struct {
@@ -59,17 +62,28 @@ func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *htt
 		return
 	}
 	urlLink := data.Url
-	if urlLink == "" {
+	if len(urlLink) <= 0 {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
 	options := data.Options
 	if options.MaxDepth <= 0 {
-		options.MaxDepth = 1
+		errMessage := "Invalid max depth"
+		http.Error(w, errMessage, http.StatusBadRequest)
+		return
 	}
-	if options.EditDistance <= 0 {
-		options.EditDistance = -1
+
+	if options.LevenshteinDistance < 0 {
+		errMessage := "Invalid levenshtein distance"
+		http.Error(w, errMessage, http.StatusBadRequest)
+		return
+	}
+
+	if !handleTag.IsValidHtmlTag(options.WrappedTag) {
+		errMessage := "Invalid wrapped tag"
+		http.Error(w, errMessage, http.StatusBadRequest)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -80,28 +94,36 @@ func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *htt
 	})
 
 	go func() {
-		responseData, err := h.ExtractedDataService.CreateExtractedData(
-			urlLink,
-			options.MaxDepth,
-			options.EditDistance,
-			options.Tag,
-		)
-		if err != nil {
-			http.Error(w, "Server", http.StatusBadRequest)
-			return
-		}
+		for _, url := range urlLink {
+			go func(url string) {
+				responseData, err := h.ExtractedDataService.CreateExtractedData(
+					url,
+					options.WrappedTag,
+					options.MaxDepth,
+					options.LevenshteinDistance,
+					options.Tag,
+					options.Word,
+				)
+				if err != nil {
+					http.Error(w, "Server", http.StatusBadRequest)
+					return
+				}
 
-		for _, extractedData := range responseData {
-			file, errMessage, err := h.WriteJsonFile(extractedData)
-			if err != nil {
-				fmt.Println("err: ", err)
-				http.Error(w, errMessage, http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name()))
+				for _, extractedData := range responseData {
+					file, errMessage, err := h.WriteJsonFile(extractedData)
+					if err != nil {
+						fmt.Println("err: ", err)
+						http.Error(w, errMessage, http.StatusInternalServerError)
+						return
+					}
+					w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name()))
 
+				}
+			}(url)
+			time.Sleep(5 * time.Second)
 		}
 	}()
+
 }
 
 func (h *ExtractedDataHandler) WriteJsonFile(extractedData models.ExtractedData) (file *os.File, errMessage string, err error) {

@@ -2,6 +2,7 @@ package convertJSON
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hoaibao/web-crawler/pkg/models"
 )
@@ -38,6 +39,7 @@ func GetJsonStringFromData(data models.ExtractedData) string {
 func GetJsonStringFromSliceString(data []string) string {
 	jsonString := "[\n"
 	for index, line := range data {
+		line = strings.ReplaceAll(line, `"`, `\"`)
 		jsonString += fmt.Sprintf("\t\t\"%s\"", line)
 		if index < len(data)-1 {
 			jsonString += ",\n"
