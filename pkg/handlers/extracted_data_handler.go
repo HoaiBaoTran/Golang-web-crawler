@@ -1,16 +1,12 @@
 package handlers
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/hoaibao/web-crawler/pkg/models"
 	"github.com/hoaibao/web-crawler/pkg/services"
-	convertJSON "github.com/hoaibao/web-crawler/pkg/utils/convert-json"
 	handleTag "github.com/hoaibao/web-crawler/pkg/utils/handle-html-tag"
 )
 
@@ -94,54 +90,25 @@ func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *htt
 	})
 
 	go func() {
-		for _, url := range urlLink {
-			go func(url string) {
-				responseData, err := h.ExtractedDataService.CreateExtractedData(
-					url,
-					options.WrappedTag,
-					options.MaxDepth,
-					options.LevenshteinDistance,
-					options.Tag,
-					options.Word,
-				)
-				if err != nil {
-					http.Error(w, "Server", http.StatusBadRequest)
-					return
-				}
-
-				for _, extractedData := range responseData {
-					file, errMessage, err := h.WriteJsonFile(extractedData)
-					if err != nil {
-						fmt.Println("err: ", err)
-						http.Error(w, errMessage, http.StatusInternalServerError)
-						return
-					}
-					w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name()))
-
-				}
-			}(url)
-			time.Sleep(5 * time.Second)
+		_, err := h.ExtractedDataService.CreateExtractedData(
+			options.WrappedTag,
+			options.MaxDepth,
+			options.LevenshteinDistance,
+			urlLink,
+			options.Tag,
+			options.Word,
+		)
+		if err != nil {
+			http.Error(w, "Server", http.StatusBadRequest)
+			return
 		}
+		// for _, extractedData := range responseData {
+		// 	if err != nil {
+		// 		fmt.Println("err: ", err)
+		// 		http.Error(w, errMessage, http.StatusInternalServerError)
+		// 		return
+		// 	}
+		// 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Name()))
+		// }
 	}()
-
-}
-
-func (h *ExtractedDataHandler) WriteJsonFile(extractedData models.ExtractedData) (file *os.File, errMessage string, err error) {
-	current_date := time.Now().Format("02-01-2006")
-	current_time := time.Now().Format("15-04-05")
-	outputFileName := fmt.Sprintf("json-files/%s_%s_%s.json", extractedData.Id, current_date, current_time)
-
-	file, err = os.Create(outputFileName)
-	if err != nil {
-		errMessage = "Error opening JSON file"
-		return
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-
-	jsonString := convertJSON.GetJsonStringFromData(extractedData)
-	writer.Write([]byte(jsonString))
-
-	return
 }

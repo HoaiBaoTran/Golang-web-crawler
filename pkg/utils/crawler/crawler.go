@@ -43,6 +43,7 @@ func (myCrawler *MyCrawler) CrawlWeb(urlLink string, depth int, tag []string, ex
 	defer func() {
 		exit <- true
 	}()
+
 	if depth <= 0 {
 		fmt.Println("Exit")
 		return
@@ -62,36 +63,37 @@ func (myCrawler *MyCrawler) CrawlWeb(urlLink string, depth int, tag []string, ex
 
 	extractedData := myCrawler.CrawlData(urlLink, tag)
 	dataChan <- extractedData
+
 	e := make(chan bool)
 	for _, u := range extractedData.RelatedUrl {
-		time.Sleep(minPerLinkTest)
 		go func(u string) {
 			myCrawler.CrawlWeb(u, depth-1, tag, e, dataChan)
 		}(u)
+		time.Sleep(minPerLinkTest)
 	}
 
 	for i := 0; i < len(extractedData.RelatedUrl); i++ {
 		<-e
 	}
-
 }
 
 func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.ExtractedData {
 	extractedData := models.ExtractedData{}
 
 	extractedData.CrawledUrl = urlLink
-	relatedUrlChan := myCrawler.CrawlRelatedUrl(urlLink)
 
-	myCrawler.crawler.OnHTML("body", func(e *colly.HTMLElement) {
-		dataSource := e.Attr("data-source")
-		dataSlice := strings.Split(dataSource, "-")
-		id := dataSlice[len(dataSlice)-1]
-		extractedData.Id = id
-	})
+	extractedData.Id = myCrawler.CrawlIdFromUrl(urlLink)
+	imgSrc := myCrawler.CrawlImageSrc(urlLink)
+	for _, value := range imgSrc {
+		extractedData.Img = append(extractedData.Img, models.ImgStruct{
+			Src: value,
+		})
+	}
+	relatedUrl := myCrawler.CrawlRelatedUrl(urlLink)
+	extractedData.RelatedUrl = relatedUrl
 
-	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1", func(e *colly.HTMLElement) {
-
-		title := e.ChildText(".top-detail > .container > .sidebar-1 > .title-detail")
+	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1 > .title-detail", func(e *colly.HTMLElement) {
+		title := e.Text
 		if title != "" {
 			if slices.Contains(tag, "h1") {
 				title = fmt.Sprintf(`<h1>%s</h1>`, title)
@@ -99,6 +101,9 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 			extractedData.Title = title
 		}
 
+	})
+
+	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article", func(e *colly.HTMLElement) {
 		lines := e.ChildTexts(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > p")
 		for _, line := range lines {
 			if slices.Contains(tag, "p") {
@@ -106,29 +111,15 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 			}
 			extractedData.Paragraph = append(extractedData.Paragraph, line)
 		}
-		// if len(lines) > 0 {
-		// 	if slices.Contains(tag, "p") {
-		// 		extractedData.Paragraph = fmt.Sprintf(`<p>%s</p>`, )
-		// 	} else {
-		// 		extractedData.Paragraph = title
-		// 	}
-		// 	extractedData.Paragraph = append(extractedData.Paragraph, lines...)
-		// }
+	})
 
-		imgUrls := e.ChildAttrs(".top-detail > .container > .sidebar-1 > article > figure > .fig-picture > picture > img", "src")
-		if len(imgUrls) > 0 {
-			for _, value := range imgUrls {
-				extractedData.Img = append(extractedData.Img, models.ImgStruct{
-					Src: value,
-				})
+	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > figure > figcaption", func(e *colly.HTMLElement) {
+		descriptions := e.ChildTexts(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > figure > figcaption > p")
+		for index, line := range descriptions {
+			if slices.Contains(tag, "p") {
+				line = fmt.Sprintf(`<p>%s</p>`, line)
 			}
-		}
-
-		imgDescriptions := e.ChildTexts(".top-detail > .container > .sidebar-1 > article > figure > figcaption > p")
-		if len(imgDescriptions) > 0 {
-			for index, value := range imgDescriptions {
-				extractedData.Img[index].Description = value
-			}
+			extractedData.Img[index].Description = line
 		}
 	})
 
@@ -137,78 +128,207 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 	})
 
 	myCrawler.crawler.Visit(urlLink)
-	fmt.Println("Craw data: ", urlLink)
-	fmt.Println("Start craw related urls: ", urlLink)
-	extractedData.RelatedUrl = <-relatedUrlChan
-	fmt.Println("Finish craw related urls: ", urlLink)
+
+	fmt.Println("Link: ", urlLink)
+	fmt.Println("Title: ", extractedData.Title)
 	return extractedData
 }
 
-func (myCrawler *MyCrawler) CrawlRelatedUrl(urlLink string) <-chan []string {
-	relatedUrlChan := make(chan []string)
-	go func(urlLink string) {
-		opts := append(chromeDp.DefaultExecAllocatorOptions[:],
-			// chromeDp.Flag("headless", false),
-			chromeDp.Flag("headless", true),
-			chromeDp.Flag("start-fullscreen", true),
-			// chromeDp.Flag("enable-automation", false),
-			// chromeDp.Flag("disable-extensions", false),
-			// chromeDp.Flag("remote-debugging-port", "9222"),
-		)
+func (myCrawler *MyCrawler) CrawlImageSrc(urlLink string) []string {
+	// imgChan := make(chan []string)
+	var imgSrc []string
+	// go func(urlLink string) {
+	opts := append(chromeDp.DefaultExecAllocatorOptions[:],
+		chromeDp.Flag("headless", true),
+		chromeDp.Flag("start-fullscreen", true),
+	)
 
-		// ctxTimeOut, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		// defer cancel()
-		// allocatorCtx, cancel := chromeDp.NewExecAllocator(ctxTimeOut, opts...)
-		// defer cancel()
-		allocatorCtx, cancel := chromeDp.NewExecAllocator(context.Background(), opts...)
-		defer cancel()
-		ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
-		defer cancel()
+	allocatorCtx, cancel := chromeDp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+	ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
+	defer cancel()
 
-		var elements []*cdp.Node
-		relatedUrls := make([]string, 0)
+	var elements []*cdp.Node
+	images := make([]string, 0)
 
-		var found bool
-		beforeTasks := chromeDp.Tasks{
+	var found bool
+	beforeTasks := chromeDp.Tasks{
+		chromeDp.Navigate(urlLink),
+		chromeDp.EvaluateAsDevTools(`document.getElementsByClassName("action_thumb_added").length > 0 ? true : false`, &found),
+	}
+	err := chromeDp.Run(ctx, beforeTasks)
+	if !found {
+		fmt.Println("Not found element ", err, urlLink)
+		// imgChan <- images
+		return imgSrc
+	} else {
+		tasks := chromeDp.Tasks{
 			chromeDp.Navigate(urlLink),
-			// chromeDp.Sleep(5 * time.Second),
-			chromeDp.EvaluateAsDevTools(`document.getElementsByClassName("box-tinlienquanv2").length > 0 ? true : false`, &found),
+			chromeDp.WaitVisible(".top-detail > .container > .sidebar-1 > article > figure > .fig-picture > picture > img", chromeDp.ByQuery),
+			chromeDp.Nodes(".top-detail > .container > .sidebar-1 > article > figure > .fig-picture > picture > img", &elements),
 		}
-		err := chromeDp.Run(ctx, beforeTasks)
-		if !found {
-			fmt.Println("Not found element ", err, urlLink)
-			relatedUrlChan <- []string{}
-			return
-		} else {
-			tasks := chromeDp.Tasks{
-				chromeDp.Navigate(urlLink),
-				chromeDp.WaitVisible(".top-detail > .container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2 > article > h4 > a", chromeDp.ByQuery),
-				chromeDp.Nodes(".top-detail > .container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2 > article > h4 > a", &elements),
-			}
-			err := chromeDp.Run(ctx, tasks)
+		err := chromeDp.Run(ctx, tasks)
+		if err != nil {
+			fmt.Println("Not found element ", err)
+			// imgChan <- images
+			return imgSrc
+		}
+
+		for _, element := range elements {
+			var attributes map[string]string
+			err = chromeDp.Run(ctx, chromeDp.Attributes(element.FullXPath(), &attributes))
 			if err != nil {
-				fmt.Println("Not found element ", err)
-				relatedUrlChan <- relatedUrls
-				return
+				fmt.Println("Failed to get attributes:", err)
+				// imgChan <- images
+				return imgSrc
 			}
 
-			for _, element := range elements {
-				var attributes map[string]string
-				err = chromeDp.Run(ctx, chromeDp.Attributes(element.FullXPath(), &attributes))
-				if err != nil {
-					fmt.Println("Failed to get attributes:", err)
-					relatedUrlChan <- relatedUrls
-					return
-				}
-
-				for key, value := range attributes {
-					if key == "href" {
-						relatedUrls = append(relatedUrls, value)
-					}
+			for key, value := range attributes {
+				if key == "src" {
+					images = append(images, value)
 				}
 			}
-			relatedUrlChan <- relatedUrls
 		}
-	}(urlLink)
-	return relatedUrlChan
+		// imgChan <- images
+		imgSrc = images
+	}
+	// }(urlLink)
+	// return imgChan
+	return imgSrc
+}
+
+func (myCrawler *MyCrawler) CrawlImageDescription(urlLink string) []string {
+	// imgChan := make(chan []string)
+	// go func(urlLink string) {
+	var imgDescriptions []string
+	opts := append(chromeDp.DefaultExecAllocatorOptions[:],
+		chromeDp.Flag("headless", true),
+		chromeDp.Flag("start-fullscreen", true),
+	)
+
+	allocatorCtx, cancel := chromeDp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+	ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
+	defer cancel()
+
+	var elements []*cdp.Node
+	imageDescriptions := make([]string, 0)
+
+	var found bool
+	beforeTasks := chromeDp.Tasks{
+		chromeDp.Navigate(urlLink),
+		chromeDp.EvaluateAsDevTools(`document.getElementsByClassName("action_thumb_added").length > 0 ? true : false`, &found),
+	}
+	err := chromeDp.Run(ctx, beforeTasks)
+	if !found {
+		fmt.Println("Not found element ", err, urlLink)
+		// imgChan <- imageDescriptions
+		return imgDescriptions
+	} else {
+		tasks := chromeDp.Tasks{
+			chromeDp.Navigate(urlLink),
+			chromeDp.WaitVisible(".top-detail > .container > .sidebar-1 > article > figure > figcaption > p", chromeDp.ByQuery),
+			chromeDp.Nodes(".top-detail > .container > .sidebar-1 > article > figure > figcaption > p", &elements),
+		}
+		err := chromeDp.Run(ctx, tasks)
+		if err != nil {
+			fmt.Println("Not found element ", err)
+			// imgChan <- imageDescriptions
+			return imgDescriptions
+		}
+
+		for _, element := range elements {
+			var content string
+			err = chromeDp.Run(ctx, chromeDp.Text(element.FullXPath(), &content))
+			if err != nil {
+				fmt.Println("Failed to get attributes:", err)
+				// imgChan <- imageDescriptions
+				return imgDescriptions
+			}
+			imageDescriptions = append(imageDescriptions, content)
+		}
+		// imgChan <- imageDescriptions
+		imgDescriptions = imageDescriptions
+	}
+	// }(urlLink)÷
+	// return imgChan
+	return imgDescriptions
+}
+
+func (myCrawler *MyCrawler) CrawlRelatedUrl(urlLink string) []string {
+	var relatedUrl []string
+	// relatedUrlChan := make(chan []string)
+	// go func(urlLink string) {
+	opts := append(chromeDp.DefaultExecAllocatorOptions[:],
+		// chromeDp.Flag("headless", false),
+		chromeDp.Flag("headless", true),
+		chromeDp.Flag("start-fullscreen", true),
+		// chromeDp.Flag("enable-automation", false),
+		// chromeDp.Flag("disable-extensions", false),
+		// chromeDp.Flag("remote-debugging-port", "9222"),
+	)
+
+	// ctxTimeOut, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	// defer cancel()
+	// allocatorCtx, cancel := chromeDp.NewExecAllocator(ctxTimeOut, opts...)
+	// defer cancel()
+	allocatorCtx, cancel := chromeDp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+	ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
+	defer cancel()
+
+	var elements []*cdp.Node
+	relatedUrls := make([]string, 0)
+
+	var found bool
+	beforeTasks := chromeDp.Tasks{
+		chromeDp.Navigate(urlLink),
+		chromeDp.EvaluateAsDevTools(`document.getElementsByClassName("box-tinlienquanv2").length > 0 ? true : false`, &found),
+	}
+	err := chromeDp.Run(ctx, beforeTasks)
+	if !found {
+		fmt.Println("Not found element ", err, urlLink)
+		// relatedUrlChan <- relatedUrls
+		return relatedUrl
+	} else {
+		tasks := chromeDp.Tasks{
+			chromeDp.Navigate(urlLink),
+			chromeDp.WaitVisible(".top-detail > .container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2 > article > h4 > a", chromeDp.ByQuery),
+			chromeDp.Nodes(".top-detail > .container > .sidebar-1 > article.fck_detail > .box-tinlienquanv2 > article > h4 > a", &elements),
+		}
+		err := chromeDp.Run(ctx, tasks)
+		if err != nil {
+			fmt.Println("Not found element ", err)
+			// relatedUrlChan <- relatedUrls
+			return relatedUrl
+		}
+
+		for _, element := range elements {
+			var attributes map[string]string
+			err = chromeDp.Run(ctx, chromeDp.Attributes(element.FullXPath(), &attributes))
+			if err != nil {
+				fmt.Println("Failed to get attributes:", err)
+				// relatedUrlChan <- relatedUrls
+				return relatedUrl
+			}
+
+			for key, value := range attributes {
+				if key == "href" {
+					relatedUrls = append(relatedUrls, value)
+				}
+			}
+		}
+		// relatedUrlChan <- relatedUrls
+		relatedUrl = relatedUrls
+	}
+	// }(urlLink)
+	// return relatedUrlChan
+	return relatedUrl
+}
+
+func (myCrawler *MyCrawler) CrawlIdFromUrl(urlLink string) string {
+	data := strings.Split(urlLink, "-")
+	idWithExtension := data[len(data)-1]
+	arr := strings.Split(idWithExtension, ".")
+	return arr[0]
 }

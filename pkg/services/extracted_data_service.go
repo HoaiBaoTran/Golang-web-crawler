@@ -2,9 +2,11 @@ package services
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hoaibao/web-crawler/pkg/models"
 	"github.com/hoaibao/web-crawler/pkg/repositories"
+	convertJSON "github.com/hoaibao/web-crawler/pkg/utils/convert-json"
 	"github.com/hoaibao/web-crawler/pkg/utils/crawler"
 	handleTag "github.com/hoaibao/web-crawler/pkg/utils/handle-html-tag"
 	"github.com/hoaibao/web-crawler/pkg/utils/statistics"
@@ -28,16 +30,19 @@ func (s *ExtractedDataService) GetExtractedDataById(id int) (models.ExtractedDat
 	return s.ExtractedDataRepository.GetExtractedDataById(id)
 }
 
-func (s *ExtractedDataService) CreateExtractedData(urlPath, wrappedTag string, maxDepth, levenshteinDistance int, tag, words []string) ([]models.ExtractedData, error) {
+func (s *ExtractedDataService) CreateExtractedData(wrappedTag string, maxDepth, levenshteinDistance int, urlPath, tag, words []string) ([]models.ExtractedData, error) {
 	exitChan := make(chan bool)
 	dataChan := make(chan models.ExtractedData)
 	var data []models.ExtractedData
 
 	myCrawler := crawler.CreateCrawler(maxDepth)
 
-	go func(urlPath string) {
-		myCrawler.CrawlWeb(urlPath, maxDepth, tag, exitChan, dataChan)
-	}(urlPath)
+	for _, url := range urlPath {
+		go func(url string) {
+			myCrawler.CrawlWeb(url, maxDepth, tag, exitChan, dataChan)
+		}(url)
+		time.Sleep(5 * time.Second)
+	}
 
 	for {
 		select {
@@ -52,14 +57,21 @@ func (s *ExtractedDataService) CreateExtractedData(urlPath, wrappedTag string, m
 			if levenshteinDistance >= 0 && len(words) > 0 {
 				extractedData.Paragraph = handleTag.ChangeContentToHtmlTag(extractedData.Paragraph, words, wrappedTag, levenshteinDistance)
 			}
-			fmt.Println("extracted-data: ", extractedData.Title)
+			convertJSON.WriteJsonFile(extractedData)
 			data = append(data, extractedData)
+
 		case <-exitChan:
 			repositories.LogMessage("Finish crawling ", urlPath)
+			var responseData []models.ExtractedData
 			for _, smallData := range data {
-				fmt.Println("Data: ", smallData.Title)
+				extractedData, err := s.ExtractedDataRepository.CreateExtractedData(smallData)
+				if err != nil {
+					repositories.LogMessage("Can't not insert into database", err)
+				}
+				fmt.Println("Data ExitChan: ", smallData.Title)
+				responseData = append(responseData, extractedData)
 			}
-			// return s.ExtractedDataRepository.CreateExtractedData(data)
+			return responseData, nil
 		}
 	}
 
