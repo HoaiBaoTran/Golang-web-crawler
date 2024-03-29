@@ -1,8 +1,0 @@
-2024-03-28 23:55:03	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/messi-suarez-cuu-inter-miami-thoat-thua-4719944.html, depth: 2]
-2024-03-28 23:57:49	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/klopp-neu-khong-phai-messi-ban-phai-phong-ngu-4718859.html, depth: 1]
-2024-03-28 23:57:49	[INFO]	repositories/memory_extracted_data_repository.go:33	[Data Repo:  <h1>Messi, Suarez cứu Inter Miami thoát thua </h1>]
-2024-03-28 23:57:49	[INFO]	repositories/memory_extracted_data_repository.go:33	[Number of rows affected: 299]
-2024-03-28 23:57:54	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/haaland-messi-phai-giai-nghe-de-nguoi-khac-duoc-xem-la-hay-nhat-4718867.html, depth: 1]
-2024-03-28 23:57:59	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/leboeuf-bo-dao-nha-chi-gianh-euro-neu-loai-ronaldo-4718329.html, depth: 1]
-2024-03-28 23:58:04	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/neymar-hy-vong-choi-cung-messi-lan-nua-4717782.html, depth: 1]
-2024-03-28 23:58:09	[INFO]	logger/logger.go:28	[Crawling link: https://vnexpress.net/messi-lap-cu-dup-bang-dau-va-nguc-4717742.html, depth: 1]

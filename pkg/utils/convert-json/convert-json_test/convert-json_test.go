@@ -74,11 +74,11 @@ func TestGetJsonStringFromData(t *testing.T) {
 		CrawledUrl: "crawled-url",
 		RelatedUrl: []string{"related-1", "related-2"},
 		Img: []models.ImgStruct{
-			models.ImgStruct{
+			{
 				Src:         "img-src1",
 				Description: "img-description-1",
 			},
-			models.ImgStruct{
+			{
 				Src:         "img-src2",
 				Description: "img-description-2",
 			},

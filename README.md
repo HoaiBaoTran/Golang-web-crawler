@@ -17,15 +17,12 @@ Yêu cầu chi tiết:
 - Crawl nhiều tầng, nghĩa là nếu trong bài đó có các bài artical khác thì tiếp tục crawl các link đó, user có thể optional từ 1 đến 3 tầng link như vậy
 - Giữ các tag html nào
 + highlight các từ giống nhau bằng html tag hoặc in đậm từ đó lên (dùng Levenshtein Distance (Edit Distance_))
+- Back end Golang: Log, Unit test, concurrency (mỗi link sẽ có 1 job chạy riêng biệt), style code, handle lỗi
 ------- DONE ---------
 
 
 ------- DOING ---------
-- Back end Golang: Log, Unit test, concurrency (mỗi link sẽ có 1 job chạy riêng biệt), style code, handle lỗi
-------- DOING ---------
-
-------- NOT YET ---------
 - Front end react, UI đơn giản và hợp lí (Optional)
   + Form gửi link crawl
   + Trang xem data của từng link (nếu crawl link đó bị lỗi thì lưu lỗi vào để khi xem biết nó bị gì)
-------- NOT YET ---------
+------- DOING ---------

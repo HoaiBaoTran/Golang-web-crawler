@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	minPerLinkTest = 5 * time.Second
+	minPerLinkTest = 6 * time.Second
 	minPerLink     = 1 * time.Minute
 )
 
@@ -113,7 +113,7 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 		}
 	})
 
-	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > figure > figcaption", func(e *colly.HTMLElement) {
+	myCrawler.crawler.OnHTML(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > figure", func(e *colly.HTMLElement) {
 		descriptions := e.ChildTexts(".top-detail > .container > .sidebar-1 > p, .top-detail > .container > .sidebar-1 > article > figure > figcaption > p")
 		for index, line := range descriptions {
 			if slices.Contains(tag, "p") {
@@ -129,8 +129,6 @@ func (myCrawler *MyCrawler) CrawlData(urlLink string, tag []string) models.Extra
 
 	myCrawler.crawler.Visit(urlLink)
 
-	fmt.Println("Link: ", urlLink)
-	fmt.Println("Title: ", extractedData.Title)
 	return extractedData
 }
 
@@ -195,64 +193,6 @@ func (myCrawler *MyCrawler) CrawlImageSrc(urlLink string) []string {
 	// }(urlLink)
 	// return imgChan
 	return imgSrc
-}
-
-func (myCrawler *MyCrawler) CrawlImageDescription(urlLink string) []string {
-	// imgChan := make(chan []string)
-	// go func(urlLink string) {
-	var imgDescriptions []string
-	opts := append(chromeDp.DefaultExecAllocatorOptions[:],
-		chromeDp.Flag("headless", true),
-		chromeDp.Flag("start-fullscreen", true),
-	)
-
-	allocatorCtx, cancel := chromeDp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-	ctx, cancel := chromeDp.NewContext(allocatorCtx, chromeDp.WithLogf(log.Printf))
-	defer cancel()
-
-	var elements []*cdp.Node
-	imageDescriptions := make([]string, 0)
-
-	var found bool
-	beforeTasks := chromeDp.Tasks{
-		chromeDp.Navigate(urlLink),
-		chromeDp.EvaluateAsDevTools(`document.getElementsByClassName("action_thumb_added").length > 0 ? true : false`, &found),
-	}
-	err := chromeDp.Run(ctx, beforeTasks)
-	if !found {
-		fmt.Println("Not found element ", err, urlLink)
-		// imgChan <- imageDescriptions
-		return imgDescriptions
-	} else {
-		tasks := chromeDp.Tasks{
-			chromeDp.Navigate(urlLink),
-			chromeDp.WaitVisible(".top-detail > .container > .sidebar-1 > article > figure > figcaption > p", chromeDp.ByQuery),
-			chromeDp.Nodes(".top-detail > .container > .sidebar-1 > article > figure > figcaption > p", &elements),
-		}
-		err := chromeDp.Run(ctx, tasks)
-		if err != nil {
-			fmt.Println("Not found element ", err)
-			// imgChan <- imageDescriptions
-			return imgDescriptions
-		}
-
-		for _, element := range elements {
-			var content string
-			err = chromeDp.Run(ctx, chromeDp.Text(element.FullXPath(), &content))
-			if err != nil {
-				fmt.Println("Failed to get attributes:", err)
-				// imgChan <- imageDescriptions
-				return imgDescriptions
-			}
-			imageDescriptions = append(imageDescriptions, content)
-		}
-		// imgChan <- imageDescriptions
-		imgDescriptions = imageDescriptions
-	}
-	// }(urlLink)÷
-	// return imgChan
-	return imgDescriptions
 }
 
 func (myCrawler *MyCrawler) CrawlRelatedUrl(urlLink string) []string {

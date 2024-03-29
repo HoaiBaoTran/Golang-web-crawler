@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/hoaibao/web-crawler/pkg/models"
 )
@@ -91,9 +90,7 @@ func GetJsonStringFromMapFrequency(frequency map[string]int) string {
 }
 
 func WriteJsonFile(extractedData models.ExtractedData) (file *os.File, errMessage string, err error) {
-	current_date := time.Now().Format("02-01-2006")
-	current_time := time.Now().Format("15-04-05")
-	outputFileName := fmt.Sprintf("json-files/%s_%s_%s.json", extractedData.Id, current_date, current_time)
+	outputFileName := fmt.Sprintf("json-files/%s.json", extractedData.Id)
 
 	file, err = os.Create(outputFileName)
 	if err != nil {

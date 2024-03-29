@@ -3,8 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/hoaibao/web-crawler/pkg/models"
 	"github.com/hoaibao/web-crawler/pkg/services"
 	handleTag "github.com/hoaibao/web-crawler/pkg/utils/handle-html-tag"
@@ -47,7 +50,32 @@ func (h *ExtractedDataHandler) GetAllExtractedData(w http.ResponseWriter, r *htt
 }
 
 func (h *ExtractedDataHandler) GetExtractedDataById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, errId := vars["id"]
+	if !errId {
+		http.Error(w, "Invalid paragraph id", http.StatusBadRequest)
+		return
+	}
 
+	fileName := fmt.Sprintf("%s.json", id)
+	file, err := os.Open("json-files/" + fileName)
+	if err != nil {
+		http.Error(w, "Error retrieving extracted data", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	_, err = io.Copy(w, file)
+	if err != nil {
+		http.Error(w, "Error copying file to response", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Status:  http.StatusOK,
+		Message: "File is ready",
+	})
 }
 
 func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +130,11 @@ func (h *ExtractedDataHandler) CreateExtractedData(w http.ResponseWriter, r *htt
 			http.Error(w, "Server", http.StatusBadRequest)
 			return
 		}
+
+		json.NewEncoder(w).Encode(Response{
+			Status:  http.StatusOK,
+			Message: "Crawling data successfully",
+		})
 		// for _, extractedData := range responseData {
 		// 	if err != nil {
 		// 		fmt.Println("err: ", err)

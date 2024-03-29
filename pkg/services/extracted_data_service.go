@@ -40,7 +40,7 @@ func (s *ExtractedDataService) CreateExtractedData(wrappedTag string, maxDepth, 
 		go func(url string) {
 			myCrawler.CrawlWeb(url, maxDepth, tag, exitChan, dataChan)
 		}(url)
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	for {
 		select {

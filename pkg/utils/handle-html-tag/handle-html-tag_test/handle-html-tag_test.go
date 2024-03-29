@@ -7,7 +7,7 @@ import (
 )
 
 func TestIsValidHtmlTag(t *testing.T) {
-	str1 := `<b class="test-class"></b>`
+	str1 := `<b class='test-class'></b>`
 
 	result := handlehtmltag.IsValidHtmlTag(str1)
 
