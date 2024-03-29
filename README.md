@@ -21,12 +21,10 @@ Yêu cầu chi tiết:
 
 
 ------- DOING ---------
-
+- Back end Golang: Log, Unit test, concurrency (mỗi link sẽ có 1 job chạy riêng biệt), style code, handle lỗi
 ------- DOING ---------
 
 ------- NOT YET ---------
-- Back end Golang: Log, Unit test, concurrency (mỗi link sẽ có 1 job chạy riêng biệt), style code, handle lỗi
-
 - Front end react, UI đơn giản và hợp lí (Optional)
   + Form gửi link crawl
   + Trang xem data của từng link (nếu crawl link đó bị lỗi thì lưu lỗi vào để khi xem biết nó bị gì)

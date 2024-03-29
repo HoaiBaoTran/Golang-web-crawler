@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hoaibao/web-crawler/pkg/models"
@@ -33,7 +32,7 @@ func (s *ExtractedDataService) GetExtractedDataById(id int) (models.ExtractedDat
 func (s *ExtractedDataService) CreateExtractedData(wrappedTag string, maxDepth, levenshteinDistance int, urlPath, tag, words []string) ([]models.ExtractedData, error) {
 	exitChan := make(chan bool)
 	dataChan := make(chan models.ExtractedData)
-	var data []models.ExtractedData
+	var responseData []models.ExtractedData
 
 	myCrawler := crawler.CreateCrawler(maxDepth)
 
@@ -43,7 +42,6 @@ func (s *ExtractedDataService) CreateExtractedData(wrappedTag string, maxDepth, 
 		}(url)
 		time.Sleep(5 * time.Second)
 	}
-
 	for {
 		select {
 		case extractedData := <-dataChan:
@@ -57,20 +55,18 @@ func (s *ExtractedDataService) CreateExtractedData(wrappedTag string, maxDepth, 
 			if levenshteinDistance >= 0 && len(words) > 0 {
 				extractedData.Paragraph = handleTag.ChangeContentToHtmlTag(extractedData.Paragraph, words, wrappedTag, levenshteinDistance)
 			}
-			convertJSON.WriteJsonFile(extractedData)
-			data = append(data, extractedData)
 
-		case <-exitChan:
-			repositories.LogMessage("Finish crawling ", urlPath)
-			var responseData []models.ExtractedData
-			for _, smallData := range data {
-				extractedData, err := s.ExtractedDataRepository.CreateExtractedData(smallData)
+			go func(extractedData models.ExtractedData) {
+				convertJSON.WriteJsonFile(extractedData)
+				responseExtractedData, err := s.ExtractedDataRepository.CreateExtractedData(extractedData)
 				if err != nil {
 					repositories.LogMessage("Can't not insert into database", err)
 				}
-				fmt.Println("Data ExitChan: ", smallData.Title)
-				responseData = append(responseData, extractedData)
-			}
+				responseData = append(responseData, responseExtractedData)
+			}(extractedData)
+
+		case <-exitChan:
+			repositories.LogMessage("Finish crawling ", urlPath)
 			return responseData, nil
 		}
 	}
